@@ -20,6 +20,7 @@ all_cap_list = []         #is the token made up of all capital letters
 first_cap_list = []       #does the token start with a capital
 token_len_list = []       #what is the length of token
 only_num_list = []        #does the token only have numbers
+cl_label = []             #tagging as /B, /I, or /O
 #NEED 3 MORE FEATURE VECTORS!!!
 
 
@@ -27,69 +28,86 @@ with open ('NLU.train') as f:
     text = f.read()
     splitlines = text.split('>')
 iter_dict = {}
-for i in range (0, 50):
-
-    #print(splitlines[i])
+#LOOP FOR FEATURE VECTORS PER TOKEN
+for i in range (len(splitlines)):
     split_str = splitlines[i].split('\n')
     for iter in range(len(split_str)):
         if split_str[iter] == '':
             continue
         else:
-            #print({iter}, ' ', split_str[iter])
+
             if iter in iter_dict:
                 iter_dict[iter] += 1
             else:
                 iter_dict[iter] = 1
             str_line = split_str[iter]
             token_lst = str_line.split()
-            #print(token_lst)
-            for word in token_lst:
-                all_cap_list.append(isAllCapital(word))
-                first_cap_list.append(isFirstCapital(word))
-                val_token_list.append(tokenVal(word))
-                token_len_list.append(tokenLen(word))
-                only_num_list.append(onlyNum(word))
+
+#            for word in token_lst:
+#                all_cap_list.append(isAllCapital(word))
+ #               first_cap_list.append(isFirstCapital(word))
+  #              val_token_list.append(tokenVal(word))
+   #             token_len_list.append(tokenLen(word))
+    #            only_num_list.append(onlyNum(word))
             #val_token_list.append()
             break
-ref_line_str = ''
-id_word = ''
-name_word = ''
-for i in range (0, 15):
-    split_str = splitlines[i].split('\n')
-    for iter in range(len(split_str)):
-        if split_str[iter] == '':
-            continue
-        elif '<'  not in split_str[iter] and '=' not in split_str[iter]:
-            ref_line_str = split_str[iter]
-            continue
-            #print(ref_line_str)
-        elif 'id=' in split_str[iter]:
-            curr_line = split_str[iter]
-            id_word = (curr_line.split('id=', 1)[1])
+#LOOP TO ASSIGN THE FEATURE VECTORS TO THE CORRESPONDING TOKENS
 
-        elif 'name=' in split_str[iter]:
-            curr_line = split_str[iter]
-            name_word = (curr_line.split('name=', 1)[1])
+lst_all_tokens = []
+
+for iter in range (len(splitlines)):
+    name_str = ''
+    id_num = ''
+    main_token = ''
+    print(splitlines[iter])
+    sentence = splitlines[iter].split('\n')
+    for sen_iter in range(len(sentence)):
+        if '<' in sentence[sen_iter]:
+            main_token = (sentence[sen_iter -1])
+        elif 'id=' in sentence[sen_iter]:
+            id_num = (sentence[sen_iter].split('id=', 1)[1])
+        elif 'name=' in sentence[sen_iter]: 
+            
+            name_str = (sentence[sen_iter].split('name=', 1)[1])
         else:
             continue
-main_line_lst = ref_line_str.split(' ')
-for token_word in range(len(main_line_lst)):
-    if id_word == main_line_lst[token_word]:
-        main_line_lst[token_word] += '/B'
-    else:
-        for name_token in range(len(main_line_lst)):
-            if main_line_lst[name_token] == main_line_lst[token_word] and name_token == 0:
-                main_line_lst[token_word] += '/B'
-            elif name_word[name_token] == main_line_lst[token_word] and name_token != 0:
-                main_line_lst[token_word] += '/I'
-            else:
+    print(id_num)
+    print(name_str)
+    print(main_token)
+    tok_split = main_token.split()
+    for c in range(len(tok_split)):
+        if len(tok_split[c]) > 1:
+            if tok_split[c] in id_num:
+                tok_split[c] += '/B'
+                lst_all_tokens.append(tok_split[c])
+            elif tok_split[c] in name_str and c < len(tok_split) and tok_split[c+1] in name_str:
+                tok_split[c] += '/B'
+                tok_split[c+1] += '/I'
+                lst_all_tokens.append(tok_split[c])
+            elif tok_split[c] in name_str and c > 0 and 'I' in tok_split[c -1]:
+                tok_split[c] += '/I'
+                lst_all_tokens.append(tok_split[c])
+            elif tok_split[c] in name_str:
+                tok_split[c] += '/B'
+                lst_all_tokens.append(tok_split[c])
+            elif '/I' in tok_split[c] or '/B' in tok_split[c]:
                 continue
-
-print(ref_line_str)
-print(id_word)
-print(name_word)
-print(main_line_lst)
+            else:
+                tok_split[c] += '/O'
+                lst_all_tokens.append(tok_split[c])
+        else:
+            tok_split[c] += '/O'
+            lst_all_tokens.append(tok_split[c])
             
+    print(tok_split)
+for tok in lst_all_tokens:
+    spl_tok = tok.split('/')
+    all_cap_list.append(isAllCapital(spl_tok[0]))
+    first_cap_list.append(isFirstCapital(spl_tok[0]))
+    val_token_list.append(tokenVal(spl_tok[0]))
+    token_len_list.append(tokenLen(spl_tok[0]))
+    only_num_list.append(onlyNum(spl_tok[0]))
+    cl_label.append(spl_tok[1])
 
 feature_vect = [[] for x in range(len(all_cap_list))]
 for x in range(len(all_cap_list)):
@@ -100,17 +118,11 @@ for x in range(len(all_cap_list)):
     f_in_vect.append(token_len_list[x])
     f_in_vect.append(only_num_list[x])
     feature_vect[x] = f_in_vect
-#test_word = "h1234"
-#print(all_cap_list)
-#print(first_cap_list)
-#print(val_token_list)
-#print(token_len_list)
-#print(only_num_list)
+print(feature_vect)
+print(cl_label)
+    
 
-#print(len(all_cap_list))
-#print(len(val_token_list))
-#print(len(token_len_list))
-#print(len(only_num_list))
 
-#print(feature_vect)
-#print(iter_dict)
+            
+
+
